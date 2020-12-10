@@ -1,38 +1,49 @@
-from sqlalchemy import or_
-from flask import request
-from flask_restful import Resource
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_restful import Resource, reqparse
+from flask_jwt_extended import jwt_required
 
 from app.models import User
+from app.celery_tasks import test
 
 
-class Token(Resource):
+class Login(Resource):
     @staticmethod
-    def get():
-        account = request.args.get('account', None)
-        passwd = request.args.get('passwd', None)
-        if account and passwd:
-            user = User.query.filter(or_(User.username == account,
-                                         User.phone == account)).first()
-            if user.verify_password(passwd):
-                return {
+    def post():
+        parser = reqparse.RequestParser()
+        parser.add_argument("account", type=str)
+        parser.add_argument("passwd", type=str)
+
+        args = parser.parse_args()
+        account, passwd = args['account'], args['passwd']
+        user = User.query.filter_by(username=account).first()
+        if not user:
+            return {
+                'code': 0,
+                'msg': 'Account does not exist!',
+                'data': None
+            }
+        if user.verify_password(passwd):
+            return {
+                'code': 1,
+                'data': {
                     'token': user.access_token(),
                     'expiration': '12H'
-                }
-            else:
-                return {
-                    'msg': 'Incorrect password'
-                }
+                },
+                'msg': 'Success'
+            }
         else:
             return {
-                    'msg': 'Missing account or password'
-                }
+                'code': 0,
+                'msg': 'Incorrect password',
+                'data': None
+            }
 
+
+class Test(Resource):
     @staticmethod
     @jwt_required
-    def post():
-        user = User.query.get(get_jwt_identity()['uid'])
+    def get():
+        res = test.delay()
+        data = res.get()
         return {
-            'token': user.access_token(),
-            'expiration': '12H'
+            'data': data
         }
