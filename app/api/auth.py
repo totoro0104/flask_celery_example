@@ -1,8 +1,7 @@
 from flask_restful import Resource, reqparse
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, current_user
 
 from app.models import User
-from app.celery_tasks import test
 
 
 class Login(Resource):
@@ -18,14 +17,14 @@ class Login(Resource):
         if not user:
             return {
                 'code': 0,
-                'msg': 'Account does not exist!',
+                'msg': 'Incorrect password or account!',
                 'data': None
             }
         if user.verify_password(passwd):
             return {
                 'code': 1,
                 'data': {
-                    'token': user.access_token(),
+                    'token': user.access_token(user.id),
                     'expiration': '12H'
                 },
                 'msg': 'Success'
@@ -33,17 +32,16 @@ class Login(Resource):
         else:
             return {
                 'code': 0,
-                'msg': 'Incorrect password',
+                'msg': 'Incorrect password or account!',
                 'data': None
             }
 
 
 class Test(Resource):
     @staticmethod
-    @jwt_required
+    @jwt_required()
     def get():
-        res = test.delay()
-        data = res.get()
+        data = {'uid': current_user.id}
         return {
             'data': data
         }

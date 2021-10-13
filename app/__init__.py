@@ -1,19 +1,28 @@
-from __future__ import absolute_import
 import os
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
 from flask_migrate import Migrate
-from celery import Celery
+from flask_jwt_extended import JWTManager
 
-from config import config, Config
-from celery_l import make_celery
+from config import config
+
 
 db = SQLAlchemy()
 migrate = Migrate()
-login_manager = LoginManager()
-celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
+jwt = JWTManager()
+
+
+@jwt.user_identity_loader
+def user_identity_lookup(user):
+    return user.id
+
+
+@jwt.user_lookup_loader
+def user_lookup_callback(_jwt_header, jwt_data):
+    from app.models import User
+    identity = jwt_data["sub"]
+    return User.query.filter_by(id=identity).one_or_none()
 
 
 def create_app(config_name):
@@ -23,10 +32,9 @@ def create_app(config_name):
 
     db.init_app(app)
     migrate.init_app(app, db)
-    login_manager.init_app(app)
+    jwt.init_app(app)
 
     return app
 
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
-celery = make_celery(app)

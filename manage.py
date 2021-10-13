@@ -1,6 +1,5 @@
-from flask_migrate import Migrate, MigrateCommand
+from flask_migrate import MigrateCommand
 from flask_script import Manager, Shell
-from flask_jwt_extended import JWTManager
 
 from app import app, db
 from app.models import User
@@ -8,8 +7,6 @@ from app.route import generate_routes
 
 generate_routes(app)
 manager = Manager(app)
-migrate = Migrate(app, db)
-jwt = JWTManager(app)
 
 
 def make_shell_context():
