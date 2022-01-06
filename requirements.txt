@@ -2,7 +2,7 @@ alembic==1.4.2
 amqp==5.0.2
 aniso8601==8.0.0
 billiard==3.6.3.0
-celery==5.0.4
+celery==5.2.2
 click==7.1.2
 click-didyoumean==0.0.3
 click-plugins==1.1.1
